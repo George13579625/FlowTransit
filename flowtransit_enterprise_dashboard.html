@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#087f5b">
+<title>FlowTransit — Enterprise Operations & Intelligence Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        transit: {
+          50: '#eefcf5',
+          100: '#d3f8e8',
+          200: '#abf1d4',
+          300: '#6ce4b6',
+          400: '#2dd492',
+          500: '#10b981',
+          600: '#087f5b',
+          700: '#06694b',
+          800: '#06543c',
+          900: '#054432',
+          950: '#102a27',
+        }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  body {
+    background: linear-gradient(135deg, #f0f7f4 0%, #f7faf9 50%, #eef4ff 100%);
+    color: #102a27;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f3; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(225, 235, 231, 0.9);
+    box-shadow: 0 10px 30px rgba(18, 53, 42, 0.05);
+  }
+  .pulse-dot {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.18); }
+  }
+</style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-transit-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-transit-100 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-transit-400 to-transit-700 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-transit-600/25">
+          ➤
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-extrabold tracking-tight text-transit-950">Flow<span class="text-transit-600">Transit</span></h1>
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-transit-100 text-transit-700 uppercase tracking-wider">Enterprise Ops v3.0</span>
+          </div>
+          <p class="text-xs text-slate-500">Autonomous Shared Transit & Green Wave Traffic Command Center</p>
+        </div>
+      </div>
+
+      <!-- Header Action Controls & System Status -->
+      <div class="flex items-center gap-3">
+        <div class="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-transit-50 border border-transit-100 text-xs font-semibold text-transit-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+          <span>System Normal · 6 Shuttles Active</span>
+        </div>
+        <button id="globalSimulationBtn" class="px-4 py-2 bg-transit-600 hover:bg-transit-700 text-white rounded-xl text-xs font-bold shadow-md shadow-transit-600/25 transition-all flex items-center gap-2 cursor-pointer">
+          <span>⚡ Toggle Live Sim Stream</span>
+        </button>
+        <button id="notificationToggleBtn" class="relative p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition text-slate-700 cursor-pointer" aria-label="Notifications">
+          <span class="text-base">🔔</span>
+          <span id="unreadBadge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        </button>
+        <div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-transit-900 text-white font-bold flex items-center justify-center text-sm shadow">
+            OP
+          </div>
+          <div class="hidden lg:block text-left">
+            <div class="text-xs font-bold text-transit-950">Director Ops</div>
+            <div class="text-[10px] text-slate-500">Central Command</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Shell -->
+  <div class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+
+    <!-- Navigation Tab Bar for Dashboard Views -->
+    <nav class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none" aria-label="Dashboard Views">
+      <button class="nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-transit-600 text-white shadow-md shadow-transit-600/20 cursor-pointer" data-view="overview">
+        <span>📊</span> <span>1. Executive Overview</span>
+      </button>
+      <button class="nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-white text-slate-600 border border-slate-200 hover:bg-transit-50 cursor-pointer" data-view="fleet">
+        <span>🚐</span> <span>2. Fleet & Telemetry</span>
+      </button>
+      <button class="nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-white text-slate-600 border border-slate-200 hover:bg-transit-50 cursor-pointer" data-view="ai-dispatch">
+        <span>🧠</span> <span>3. AI Matcher & Dispatch</span>
+      </button>
+      <button class="nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-white text-slate-600 border border-slate-200 hover:bg-transit-50 cursor-pointer" data-view="green-wave">
+        <span>🚦</span> <span>4. Green Wave Signals</span>
+      </button>
+      <button class="nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-white text-slate-600 border border-slate-200 hover:bg-transit-50 cursor-pointer" data-view="wallets">
+        <span>💳</span> <span>5. Commuter Wallets</span>
+      </button>
+      <button class="nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-white text-slate-600 border border-slate-200 hover:bg-transit-50 cursor-pointer" data-view="analytics">
+        <span>📈</span> <span>6. ESG & Impact</span>
+      </button>
+    </nav>
+
+    <!-- Dynamic Content Container -->
+    <main id="mainContainer" class="flex-1 flex flex-col gap-6">
+      <!-- Injected view content -->
+    </main>
+
+  </div>
+
+  <!-- Notification Drawer / Modal -->
+  <div id="notificationModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-extrabold text-transit-950 flex items-center gap-2"><span>🔔</span> System Notifications</h3>
+        <button id="closeNotifModal" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 flex items-center justify-center transition cursor-pointer">✕</button>
+      </div>
+      <div id="notifList" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+        <!-- Injected notifications -->
+      </div>
+      <div class="mt-5 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <button id="clearAllNotifs" class="text-xs font-bold text-transit-600 hover:underline cursor-pointer">Mark all as read</button>
+        <button id="closeNotifBtn" class="px-4 py-2 bg-transit-600 text-white rounded-xl text-xs font-bold shadow hover:bg-transit-700 cursor-pointer">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-200/80 bg-white/60 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>FlowTransit Enterprise Dashboard &copy; 2026 · Smart Urban Mobility Infrastructure</div>
+      <div class="flex items-center gap-4">
+        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> API Status: Optimal</span>
+        <span>Latency: 22ms</span>
+        <span>Secure TLS Stream</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic & State Management -->
+  <script>
+    (function() {
+      'use strict';
+
+      // Application State
+      let currentView = 'overview';
+      let isLiveSimActive = true;
+      let greenWaveActive = false;
+      let unreadCount = 3;
+
+      // Mock Datasets
+      const metrics = {
+        activeShuttles: 6,
+        totalRidesToday: 1428,
+        co2SavedKg: 894.5,
+        avgWaitTimeMin: 3.4,
+        greenWaveTriggers: 48,
+        fleetUtilization: '84.2%'
+      };
+
+      const shuttles = [
+        { id: 'SH-042', name: 'EV Shuttle #42', driver: 'Alex Tan', battery: '88%', occupancy: '3/4 seats', route: 'Kwasa Sentral ⇄ Elmina', status: 'En Route', speed: '42 km/h', lat: '3.158', lng: '101.571', signalPriority: 'Active', health: 'Optimal' },
+        { id: 'SH-018', name: 'EV Shuttle #18', driver: 'Siti Aminah', battery: '92%', occupancy: '4/4 seats', route: '1 Utama ⇄ Subang', status: 'Boarding', speed: '0 km/h', lat: '3.150', lng: '101.615', signalPriority: 'Standby', health: 'Good' },
+        { id: 'SH-029', name: 'EV Shuttle #29', driver: 'Ravi Kumar', battery: '64%', occupancy: '2/4 seats', route: 'Sungai Buloh Hub', status: 'En Route', speed: '38 km/h', lat: '3.210', lng: '101.583', signalPriority: 'Active', health: 'Good' },
+        { id: 'SH-055', name: 'EV Shuttle #55', driver: 'Marcus Lee', battery: '79%', occupancy: '1/4 seats', route: 'GCE Highway Loop', status: 'En Route', speed: '55 km/h', lat: '3.180', lng: '101.530', signalPriority: 'Active', health: 'Optimal' },
+        { id: 'SH-011', name: 'EV Shuttle #11', driver: 'Nurul Huda', battery: '41%', occupancy: '4/4 seats', route: 'Damansara Express', status: 'Charging / Rest', speed: '0 km/h', lat: '3.140', lng: '101.630', signalPriority: 'Standby', health: 'Needs Service' },
+        { id: 'SH-088', name: 'EV Shuttle #88', driver: 'David Wong', battery: '95%', occupancy: '0/4 seats', route: 'Elmina Lakeside Shuttle', status: 'Idle', speed: '0 km/h', lat: '3.165', lng: '101.520', signalPriority: 'Standby', health: 'Optimal' }
+      ];
+
+      const dispatchLogs = [
+        { id: 'REQ-9082', user: 'Jordan Wong', origin: 'Elmina East', dest: 'Kwasa Sentral MRT', pax: 1, fare: '$1.50', status: 'Matched & Dispatched', time: '1 min ago' },
+        { id: 'REQ-9081', user: 'Sarah Jenkins', origin: 'Subang Perdana', dest: '1 Utama Shopping Centre', pax: 2, fare: '$3.00', status: 'Matched with SH-018', time: '3 mins ago' },
+        { id: 'REQ-9080', user: 'Ahmad Faizal', origin: 'Denai Alam', dest: 'Sungai Buloh Station', pax: 1, fare: '$1.80', status: 'Completed', time: '7 mins ago' },
+        { id: 'REQ-9079', user: 'Elena Rostova', origin: 'Kwasa Damansara', dest: 'Elmina Lakeside Mall', pax: 3, fare: '$3.60', status: 'Completed', time: '12 mins ago' },
+        { id: 'REQ-9078', user: 'Chong Wei Ming', origin: 'Subang Bestari', dest: 'GCE Highway Exit', pax: 1, fare: '$1.50', status: 'Completed', time: '18 mins ago' }
+      ];
+
+      const usersLedger = [
+        { uid: 'USR-8821', name: 'Jordan Wong', email: 'jordan@example.com', balance: '$18.50', trips: 24, status: 'Active', tier: 'Gold' },
+        { uid: 'USR-4432', name: 'Sarah Jenkins', email: 'sarah.j@techmail.io', balance: '$42.00', trips: 51, status: 'Active', tier: 'Platinum' },
+        { uid: 'USR-1092', name: 'Ahmad Faizal', email: 'faizal.ahmad@gov.my', balance: '$5.20', trips: 12, status: 'Active', tier: 'Silver' },
+        { uid: 'USR-6671', name: 'Elena Rostova', email: 'elena.r@designhub.co', balance: '$29.80', trips: 33, status: 'Active', tier: 'Gold' },
+        { uid: 'USR-3394', name: 'Chong Wei Ming', email: 'wm.chong@freelance.my', balance: '$12.00', trips: 8, status: 'Active', tier: 'Standard' }
+      ];
+
+      const notifications = [
+        { id: 1, title: 'Green Wave Sequence Triggered', desc: 'Junction 101 to Junction 103 synchronized successfully. 18s saved per shuttle.', time: '2m ago' },
+        { id: 2, title: 'High Passenger Surge Detected', desc: 'Kwasa Sentral MRT station experiencing 40% surge in shared ride requests.', time: '11m ago' },
+        { id: 3, title: 'Shuttle #011 Low Battery Warning', desc: 'Battery dropped below 45%. Rerouted to fast-charging bay.', time: '25m ago' }
+      ];
+
+      // Helpers
+      function safe(str) {
+        return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      function showToast(msg) {
+        const existing = document.getElementById('toastNotification');
+        if (existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.id = 'toastNotification';
+        toast.className = 'fixed bottom-6 right-6 z-50 bg-transit-950 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-3 border border-transit-800 animate-in fade-in slide-in-from-bottom-4 duration-200';
+        toast.innerHTML = `<span class="w-2 h-2 rounded-full bg-transit-400"></span> <span>${safe(msg)}</span>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3200);
+      }
+
+      // Tab Switcher
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.nav-tab').forEach(b => {
+            b.className = 'nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-white text-slate-600 border border-slate-200 hover:bg-transit-50 cursor-pointer';
+          });
+          btn.className = 'nav-tab px-4 py-2.5 rounded-xl font-bold text-xs tracking-wide flex items-center gap-2 transition bg-transit-600 text-white shadow-md shadow-transit-600/20 cursor-pointer';
+          currentView = btn.dataset.view;
+          render();
+        });
+      });
+
+      // Global Simulation Toggle
+      document.getElementById('globalSimulationBtn').addEventListener('click', () => {
+        isLiveSimActive = !isLiveSimActive;
+        const btn = document.getElementById('globalSimulationBtn');
+        if (isLiveSimActive) {
+          btn.innerHTML = '<span>⚡ Toggle Live Sim Stream</span>';
+          btn.className = 'px-4 py-2 bg-transit-600 hover:bg-transit-700 text-white rounded-xl text-xs font-bold shadow-md shadow-transit-600/25 transition-all flex items-center gap-2 cursor-pointer';
+          showToast('Live telemetry simulation resumed.');
+        } else {
+          btn.innerHTML = '<span>⏸ Sim Paused</span>';
+          btn.className = 'px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/25 transition-all flex items-center gap-2 cursor-pointer';
+          showToast('Live telemetry simulation paused.');
+        }
+      });
+
+      // Notification modal bindings
+      const notifModal = document.getElementById('notificationModal');
+      document.getElementById('notificationToggleBtn').addEventListener('click', () => {
+        notifModal.classList.remove('hidden');
+        renderNotifications();
+      });
+      document.getElementById('closeNotifModal').addEventListener('click', () => notifModal.classList.add('hidden'));
+      document.getElementById('closeNotifBtn').addEventListener('click', () => notifModal.classList.add('hidden'));
+      document.getElementById('clearAllNotifs').addEventListener('click', () => {
+        unreadCount = 0;
+        document.getElementById('unreadBadge').style.display = 'none';
+        notifications.forEach(n => n.read = true);
+        renderNotifications();
+        showToast('All notifications marked as read.');
+      });
+
+      function renderNotifications() {
+        const list = document.getElementById('notifList');
+        list.innerHTML = notifications.map(n => `
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+            <div class="w-8 h-8 rounded-xl bg-transit-100 text-transit-700 flex items-center justify-center font-bold text-sm shrink-0">i</div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between"><b class="text-xs text-transit-950">${safe(n.title)}</b><span class="text-[10px] text-slate-400">${n.time}</span></div>
+              <p class="text-[11px] text-slate-600 mt-1">${safe(n.desc)}</p>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Render Router
+      function render() {
+        const container = document.getElementById('mainContainer');
+        if (currentView === 'overview') container.innerHTML = renderOverview();
+        else if (currentView === 'fleet') container.innerHTML = renderFleet();
+        else if (currentView === 'ai-dispatch') container.innerHTML = renderAiDispatch();
+        else if (currentView === 'green-wave') container.innerHTML = renderGreenWave();
+        else if (currentView === 'wallets') container.innerHTML = renderWallets();
+        else if (currentView === 'analytics') container.innerHTML = renderAnalytics();
+        bindViewEvents();
+      }
+
+      // 1. Executive Overview
+      function renderOverview() {
+        return `
+          <!-- Metric Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Active Shuttles</span>
+                <div class="text-3xl font-extrabold text-transit-950 mt-1">${metrics.activeShuttles} <span class="text-xs text-transit-600 font-bold">EVs</span></div>
+                <div class="text-[11px] text-emerald-600 font-semibold mt-1">↑ 100% operational fleet</div>
+              </div>
+              <div class="w-14 h-14 rounded-2xl bg-transit-50 text-transit-600 text-2xl flex items-center justify-center shadow-inner">🚐</div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Riders Today</span>
+                <div class="text-3xl font-extrabold text-transit-950 mt-1">${metrics.totalRidesToday}</div>
+                <div class="text-[11px] text-emerald-600 font-semibold mt-1">↑ 14.2% vs yesterday</div>
+              </div>
+              <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 text-2xl flex items-center justify-center shadow-inner">👥</div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">CO₂ Reduction</span>
+                <div class="text-3xl font-extrabold text-transit-950 mt-1">${metrics.co2SavedKg} <span class="text-xs text-slate-500 font-bold">kg</span></div>
+                <div class="text-[11px] text-emerald-600 font-semibold mt-1">🌿 Equivalent to 45 trees</div>
+              </div>
+              <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 text-2xl flex items-center justify-center shadow-inner">🌱</div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Green Wave Triggers</span>
+                <div class="text-3xl font-extrabold text-transit-950 mt-1">${metrics.greenWaveTriggers}</div>
+                <div class="text-[11px] text-blue-600 font-semibold mt-1">⏱️ Avg 4.2 min saved/trip</div>
+              </div>
+              <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 text-2xl flex items-center justify-center shadow-inner">🚦</div>
+            </div>
+          </div>
+
+          <!-- Map & Dispatch Logs Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Simulated City Map -->
+            <div class="lg:col-span-2 glass-card rounded-3xl p-6 flex flex-col">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-extrabold text-transit-950">Live Fleet Radar & Interactive City Map</h3>
+                  <p class="text-xs text-slate-500">Real-time GPS tracking across residential arteries and transit hubs</p>
+                </div>
+                <span class="px-3 py-1 bg-transit-100 text-transit-800 text-xs font-bold rounded-xl">🟢 Live Telemetry</span>
+              </div>
+
+              <div class="relative flex-1 min-h-[380px] rounded-2xl overflow-hidden border border-transit-200 bg-gradient-to-br from-emerald-50 via-slate-50 to-blue-50 flex items-center justify-center shadow-inner">
+                <!-- Grid pattern background -->
+                <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#087f5b 1px, transparent 1px); background-size: 24px 24px;"></div>
+                
+                <!-- SVG Routes -->
+                <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M 60 100 Q 180 80 320 220 T 560 120" fill="none" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>
+                  <path d="M 100 300 Q 250 150 450 320 T 700 200" fill="none" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>
+                  <path d="M 60 100 Q 180 80 320 220 T 560 120" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round" class="animate-pulse"/>
+                </svg>
+
+                <!-- Shuttle Pins -->
+                ${shuttles.map((s, idx) => {
+                  const coords = [
+                    {top: '25%', left: '20%'},
+                    {top: '65%', left: '45%'},
+                    {top: '35%', left: '70%'},
+                    {top: '75%', left: '80%'},
+                    {top: '18%', left: '50%'},
+                    {top: '50%', left: '25%'}
+                  ][idx];
+                  return `
+                    <div class="absolute cursor-pointer group transition transform hover:scale-110" style="top: ${coords.top}; left: ${coords.left};" data-select-shuttle="${s.id}">
+                      <div class="relative flex items-center justify-center w-10 h-10 rounded-full bg-transit-600 text-white font-extrabold shadow-lg border-2 border-white ${s.signalPriority==='Active'?'ring-4 ring-emerald-400/40':''}">
+                        🚐
+                      </div>
+                      <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-transit-950 text-white text-[10px] font-bold py-1 px-2.5 rounded-xl shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-20">
+                        ${s.name} (${s.occupancy})
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+
+                <!-- Map Overlay -->
+                <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-md border border-slate-200/80 flex items-center gap-3">
+                  <span class="w-3 h-3 rounded-full bg-emerald-500 pulse-dot"></span>
+                  <div class="text-xs">
+                    <b class="text-transit-950 block">Green Wave Corridors Active</b>
+                    <span class="text-[10px] text-slate-500">Synchronized with 14 traffic intersections</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live AI Dispatch Log Feed -->
+            <div class="glass-card rounded-3xl p-6 flex flex-col">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-extrabold text-transit-950">AI Dispatch Feed</h3>
+                  <p class="text-xs text-slate-500">Real-time matching requests & pooling</p>
+                </div>
+                <span class="px-2.5 py-1 bg-transit-50 text-transit-700 text-[10px] font-extrabold rounded-lg">Auto-Matching</span>
+              </div>
+              <div class="flex-1 space-y-3 overflow-y-auto max-h-[380px] pr-1">
+                ${dispatchLogs.map(r => `
+                  <div class="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between gap-3">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-xl bg-transit-50 text-transit-700 font-extrabold text-sm flex items-center justify-center shrink-0">👤</div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <b class="text-xs text-transit-950">${safe(r.user)}</b>
+                          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">${r.fare}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">${safe(r.origin)} → ${safe(r.dest)}</div>
+                        <div class="text-[10px] text-transit-600 font-semibold mt-1">${r.status}</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 shrink-0">${r.time}</span>
+                  </div>
+                `).join('')}
+              </div>
+              <button id="triggerNewMatchBtn" class="mt-4 w-full py-2.5 bg-transit-50 hover:bg-transit-100 text-transit-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border border-transit-200 cursor-pointer">
+                <span>⚡ Simulate Incoming Passenger Request</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // 2. Fleet Telemetry & Shuttle Management
+      function renderFleet() {
+        return `
+          <div class="glass-card rounded-3xl p-6 flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-extrabold text-transit-950">EV Shuttle Fleet Management & Telemetry</h3>
+                <p class="text-xs text-slate-500">Real-time status cards for battery health, seat occupancy, driver info, speed, diagnostics, and maintenance</p>
+              </div>
+              <button id="addShuttleBtn" class="px-4 py-2 bg-transit-600 text-white rounded-xl text-xs font-bold shadow hover:bg-transit-700 transition cursor-pointer">＋ Deploy New EV Shuttle</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${shuttles.map(s => `
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4 relative overflow-hidden">
+                  <div class="absolute top-0 right-0 w-24 h-24 bg-transit-50 rounded-bl-full -z-0 opacity-50"></div>
+                  <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-3">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-transit-100 text-transit-700 flex items-center justify-center text-lg font-bold">🚐</div>
+                        <div>
+                          <b class="text-sm text-transit-950 block">${s.name}</b>
+                          <span class="text-[11px] text-slate-500">Driver: ${safe(s.driver)}</span>
+                        </div>
+                      </div>
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${s.status==='En Route'?'bg-emerald-100 text-emerald-800':s.status==='Boarding'?'bg-blue-100 text-blue-800':'bg-amber-100 text-amber-800'}">${s.status}</span>
+                    </div>
+
+                    <div class="space-y-2 text-xs text-slate-600 mt-3 pt-3 border-t border-slate-100">
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Assigned Route:</span>
+                        <b class="text-transit-950">${safe(s.route)}</b>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Battery Level:</span>
+                        <span class="font-extrabold text-emerald-600">${s.battery}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Seat Occupancy:</span>
+                        <span class="font-bold text-transit-800">${s.occupancy}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Speed Telemetry:</span>
+                        <span>${s.speed}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Health Status:</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.health==='Optimal'?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}">${s.health}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="relative z-10 flex items-center gap-2 pt-3 border-t border-slate-100">
+                    <button class="flex-1 py-2 bg-transit-50 hover:bg-transit-100 text-transit-800 rounded-xl text-xs font-bold transition border border-transit-200 diagnostic-btn cursor-pointer" data-shuttle-id="${s.id}">Run Diagnostics</button>
+                    <button class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer" onclick="alert('Full telematics payload inspected for ${s.name}')">Details</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. AI Ride Matching & Dispatcher Simulator
+      function renderAiDispatch() {
+        return `
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 glass-card rounded-3xl p-6 flex flex-col gap-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-transit-950">AI Ride Matching & Dispatcher Simulator</h3>
+                <p class="text-xs text-slate-500">Test peer-to-peer ride matching, seat pooling efficiency, and virtual stop dispatching in real time</p>
+              </div>
+
+              <!-- Simulator Box -->
+              <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-extrabold text-transit-950">Interactive Ride Matcher Console</h4>
+                  <span class="px-3 py-1 bg-transit-100 text-transit-700 text-xs font-bold rounded-xl">AI Engine v4.2</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Pickup Location</label>
+                    <input type="text" id="simOrigin" value="Elmina Lakeside Homes" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 outline-none focus:border-transit-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Destination</label>
+                    <input type="text" id="simDest" value="Kwasa Sentral MRT Station" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 outline-none focus:border-transit-500">
+                  </div>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                  <div class="text-xs text-slate-500">Estimated Fare: <b class="text-transit-950">$1.50</b> · Pooled with 2 other passengers</div>
+                  <button id="runAiMatchBtn" class="px-5 py-2.5 bg-transit-600 hover:bg-transit-700 text-white rounded-xl text-xs font-bold shadow-md shadow-transit-600/20 transition cursor-pointer">Simulate Match & Dispatch</button>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-3">
+                <h4 class="text-sm font-extrabold text-transit-950">Recent Dispatch Activity Log</h4>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs">
+                    <thead>
+                      <tr class="border-b border-slate-200 text-slate-400 font-bold">
+                        <th class="pb-3 px-2">Request ID</th>
+                        <th class="pb-3 px-2">Passenger</th>
+                        <th class="pb-3 px-2">Route</th>
+                        <th class="pb-3 px-2">Fare</th>
+                        <th class="pb-3 px-2">Status</th>
+                        <th class="pb-3 px-2 text-right">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      ${dispatchLogs.map(r => `
+                        <tr class="hover:bg-white/60 transition">
+                          <td class="py-3 px-2 font-bold text-transit-950">${r.id}</td>
+                          <td class="py-3 px-2 font-medium text-slate-800">${safe(r.user)}</td>
+                          <td class="py-3 px-2 text-slate-600">${safe(r.origin)} → ${safe(r.dest)}</td>
+                          <td class="py-3 px-2 font-bold text-transit-700">${r.fare}</td>
+                          <td class="py-3 px-2"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">${r.status}</span></td>
+                          <td class="py-3 px-2 text-right text-slate-400">${r.time}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pooling Insights Sidebar -->
+            <div class="glass-card rounded-3xl p-6 flex flex-col gap-6">
+              <div>
+                <h3 class="text-base font-extrabold text-transit-950">Pooling Efficiency</h3>
+                <p class="text-xs text-slate-500">Real-time capacity optimization</p>
+              </div>
+
+              <div class="space-y-4">
+                <div class="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <span class="text-xs text-slate-400 font-bold uppercase">Average Pooling Factor</span>
+                  <div class="text-2xl font-extrabold text-transit-950 mt-1">3.2 <span class="text-xs font-semibold text-emerald-600">passengers/EV</span></div>
+                  <div class="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+                    <div class="bg-transit-500 h-full rounded-full" style="width: 80%;"></div>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <span class="text-xs text-slate-400 font-bold uppercase">Virtual Stop Walking Radius</span>
+                  <div class="text-2xl font-extrabold text-transit-950 mt-1">140 <span class="text-xs font-semibold text-emerald-600">meters avg</span></div>
+                  <p class="text-[11px] text-slate-500 mt-2">Dynamic stops minimize residential noise while keeping pickup times under 3 minutes.</p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-transit-900 text-white shadow-lg flex flex-col gap-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xl">💡</span>
+                    <b class="text-xs uppercase tracking-wider text-transit-200">AI Dispatcher Note</b>
+                  </div>
+                  <p class="text-xs leading-relaxed text-transit-50">Peer-to-peer clustering successfully decreased single-car transit volume by <b>28%</b> in the Elmina sector today.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 4. Green Wave Traffic Priority Control
+      function renderGreenWave() {
+        return `
+          <div class="glass-card rounded-3xl p-6 flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-extrabold text-transit-950">Green Wave Traffic Priority Control Center</h3>
+                <p class="text-xs text-slate-500">Dedicated traffic signal synchronization controls, intersection status monitors, and time-saved metrics</p>
+              </div>
+              <button id="toggleGreenWaveMaster" class="px-5 py-2.5 rounded-xl text-xs font-bold shadow transition flex items-center gap-2 cursor-pointer ${greenWaveActive?'bg-amber-600 hover:bg-amber-700 text-white':'bg-emerald-600 hover:bg-emerald-700 text-white'}">
+                <span>🚦</span> <span>${greenWaveActive?'Deactivate Green Wave Corridor':'Activate Green Wave Corridor'}</span>
+              </button>
+            </div>
+
+            <!-- Visual Banner -->
+            <div class="p-6 rounded-2xl bg-gradient-to-r ${greenWaveActive?'from-transit-900 via-transit-800 to-emerald-900':'from-slate-900 to-slate-800'} text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6 transition-all duration-500">
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-3xl">
+                  ${greenWaveActive?'🟢':'🔴'}
+                </div>
+                <div>
+                  <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">Corridor Status</span>
+                  <h4 class="text-xl font-extrabold mt-0.5">${greenWaveActive?'Green Wave Corridor Active':'Green Wave Standby'}</h4>
+                  <p class="text-xs text-slate-300 mt-1">${greenWaveActive?'14 traffic intersections synchronized along Jalan Elmina Utama. Shuttles experiencing zero unnecessary stops.':'Traffic lights operating under standard adaptive city timing.'}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 text-right">
+                <div>
+                  <div class="text-2xl font-extrabold text-emerald-300">${greenWaveActive?'18.4s':'0s'}</div>
+                  <span class="text-[11px] text-slate-300">Avg Time Saved / Junction</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Intersections Monitor Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              ${[
+                {name: 'Junction #101 · Elmina Gateway', status: greenWaveActive?'Green Light (Extended 15s)':'Normal Cycle', vehicles: '3 shuttles cleared'},
+                {name: 'Junction #102 · Persiaran Mokhtar Dahari', status: greenWaveActive?'Green Light (Synchronized)':'Normal Cycle', vehicles: '2 shuttles cleared'},
+                {name: 'Junction #103 · Kwasa Sentral Exit', status: greenWaveActive?'Green Light (Priority Wave)':'Normal Cycle', vehicles: '4 shuttles cleared'}
+              ].map((j, i) => `
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-extrabold text-transit-700">Intersection 0${i+1}</span>
+                      <span class="w-2.5 h-2.5 rounded-full ${greenWaveActive?'bg-emerald-500 pulse-dot':'bg-slate-300'}"></span>
+                    </div>
+                    <b class="text-sm text-transit-950 block">${safe(j.name)}</b>
+                    <p class="text-xs text-slate-500 mt-1">${j.vehicles}</p>
+                  </div>
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Signal State:</span>
+                    <span class="font-bold ${greenWaveActive?'text-emerald-600':'text-slate-700'}">${j.status}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // 5. Commuter & Wallet Ledger
+      function renderWallets() {
+        return `
+          <div class="glass-card rounded-3xl p-6 flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-extrabold text-transit-950">Commuter & Wallet Ledger</h3>
+                <p class="text-xs text-slate-500">Management interface for registered riders, demo credit balances, and transaction history</p>
+              </div>
+              <button id="addCreditsGlobalBtn" class="px-4 py-2 bg-transit-600 text-white rounded-xl text-xs font-bold shadow hover:bg-transit-700 transition cursor-pointer">＋ Top Up Demo Credits</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-400 font-bold">
+                    <th class="pb-3 px-3">User ID</th>
+                    <th class="pb-3 px-3">Commuter Name</th>
+                    <th class="pb-3 px-3">Email Address</th>
+                    <th class="pb-3 px-3">Wallet Balance</th>
+                    <th class="pb-3 px-3">Total Trips</th>
+                    <th class="pb-3 px-3">Membership Tier</th>
+                    <th class="pb-3 px-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${usersLedger.map(u => `
+                    <tr class="hover:bg-white/60 transition">
+                      <td class="py-3 px-3 font-bold text-transit-950">${u.uid}</td>
+                      <td class="py-3 px-3 font-bold text-slate-900">${safe(u.name)}</td>
+                      <td class="py-3 px-3 text-slate-500">${safe(u.email)}</td>
+                      <td class="py-3 px-3 font-extrabold text-transit-700">${u.balance}</td>
+                      <td class="py-3 px-3 font-medium text-slate-700">${u.trips} trips</td>
+                      <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-transit-50 text-transit-700 border border-transit-100">${u.tier}</span></td>
+                      <td class="py-3 px-3 text-right">
+                        <button class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition cursor-pointer" onclick="alert('Viewing account ledger for ${safe(u.name)}')">Manage</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 6. ESG & Environmental Impact Analytics
+      function renderAnalytics() {
+        return `
+          <div class="glass-card rounded-3xl p-6 flex flex-col gap-6">
+            <div>
+              <h3 class="text-lg font-extrabold text-transit-950">ESG & Environmental Impact Analytics</h3>
+              <p class="text-xs text-slate-500">Carbon offset tracking, single-occupancy trip mitigation, and monthly shared ridership growth charts</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase">Total CO₂ Offset (YTD)</span>
+                <div class="text-3xl font-extrabold text-transit-950">14.2 <span class="text-sm text-emerald-600 font-bold">Tonnes</span></div>
+                <p class="text-xs text-slate-500 leading-relaxed">Equivalent to removing 12 gasoline passenger cars from suburban traffic for a full year.</p>
+              </div>
+
+              <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase">Single-Occupancy Trips Avoided</span>
+                <div class="text-3xl font-extrabold text-transit-950">31,450</div>
+                <p class="text-xs text-slate-500 leading-relaxed">Achieved through intelligent AI passenger pooling and first-mile/last-mile MRT shuttles.</p>
+              </div>
+
+              <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase">Average Commute Time Reduction</span>
+                <div class="text-3xl font-extrabold text-transit-950">22.8%</div>
+                <p class="text-xs text-slate-500 leading-relaxed">Powered by Green Wave transit signal priority and optimized virtual pickup routing.</p>
+              </div>
+            </div>
+
+            <!-- Monthly Growth Chart -->
+            <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col gap-4">
+              <h4 class="text-sm font-extrabold text-transit-950">Monthly Shared Ridership Growth (2026)</h4>
+              <div class="h-48 flex items-end gap-3 pt-6 px-2 border-b border-slate-100">
+                ${[40, 55, 48, 70, 85, 96, 90, 105, 120, 135, 142, 160].map((val, idx) => `
+                  <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                    <div class="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition">${val}k</div>
+                    <div class="w-full bg-transit-500 hover:bg-transit-600 rounded-t-xl transition-all duration-300" style="height: ${(val/180)*100}%;"></div>
+                    <span class="text-[10px] text-slate-400 font-bold">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][idx]}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Event Binding
+      function bindViewEvents() {
+        const triggerBtn = document.getElementById('triggerNewMatchBtn');
+        if (triggerBtn) {
+          triggerBtn.onclick = () => {
+            dispatchLogs.unshift({
+              id: 'REQ-' + Math.floor(1000 + Math.random() * 9000),
+              user: ['Melissa Tan', 'Kevin Hart', 'Rachel Green', 'David Rossi'][Math.floor(Math.random()*4)],
+              origin: 'Elmina Valley',
+              dest: 'Kwasa Sentral MRT',
+              pax: Math.floor(1 + Math.random() * 3),
+              fare: '$' + (1.5 + Math.random() * 2).toFixed(2),
+              status: 'Matched & Dispatched',
+              time: 'Just now'
+            });
+            metrics.totalRidesToday++;
+            render();
+            showToast('New shared ride request successfully matched and dispatched!');
+          };
+        }
+
+        const runAiBtn = document.getElementById('runAiMatchBtn');
+        if (runAiBtn) {
+          runAiBtn.onclick = () => {
+            const origin = document.getElementById('simOrigin').value;
+            const dest = document.getElementById('simDest').value;
+            showToast(`AI Dispatcher optimized route: ${origin} → ${dest}. EV Shuttle #42 assigned!`);
+          };
+        }
+
+        const gwMaster = document.getElementById('toggleGreenWaveMaster');
+        if (gwMaster) {
+          gwMaster.onclick = () => {
+            greenWaveActive = !greenWaveActive;
+            metrics.greenWaveTriggers += greenWaveActive ? 1 : 0;
+            render();
+            showToast(greenWaveActive ? 'Green Wave Corridor Activated across all intersections!' : 'Green Wave Corridor deactivated.');
+          };
+        }
+
+        const addShuttleBtn = document.getElementById('addShuttleBtn');
+        if (addShuttleBtn) {
+          addShuttleBtn.onclick = () => {
+            metrics.activeShuttles++;
+            shuttles.push({
+              id: 'SH-0' + Math.floor(90 + Math.random()*10),
+              name: 'EV Shuttle #' + Math.floor(90 + Math.random()*10),
+              driver: 'New Driver',
+              battery: '100%',
+              occupancy: '0/4 seats',
+              route: 'Subang Express',
+              status: 'Idle',
+              speed: '0 km/h',
+              lat: '3.160',
+              lng: '101.550',
+              signalPriority: 'Standby',
+              health: 'Optimal'
+            });
+            render();
+            showToast('New EV Shuttle successfully added to the active fleet!');
+          };
+        }
+
+        const addCreditsBtn = document.getElementById('addCreditsGlobalBtn');
+        if (addCreditsBtn) {
+          addCreditsBtn.onclick = () => {
+            showToast('Demo credit batch of $50 added to user ledger successfully.');
+          };
+        }
+
+        document.querySelectorAll('[data-select-shuttle]').forEach(el => {
+          el.onclick = () => {
+            showToast('Inspecting telemetry for Shuttle ' + el.dataset.selectShuttle);
+          };
+        });
+
+        document.querySelectorAll('.diagnostic-btn').forEach(btn => {
+          btn.onclick = () => {
+            showToast(`Diagnostics passed for ${btn.dataset.shuttleId}: Battery optimal, LIDAR sensors aligned.`);
+          };
+        });
+      }
+
+      // Initial Render
+      render();
+
+    })();
+  </script>
+</body>
+</html>
